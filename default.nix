@@ -1,2 +1,2 @@
 {pkgs  ? import <nixpkgs> {}}:
-  pkgs.haskellPackages.callPackage ./come.nix {}
+  pkgs.haskellPackages.callPackage ./blogemre.nix {}
