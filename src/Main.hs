@@ -15,8 +15,13 @@ import System.FilePath.Posix ((</>))
 import Text.Pandoc
 import GHC.Generics
 import Data.Aeson as AE
+import Control.Applicative ((<$>),(<*>))
+import Database.SQLite.Simple
+import Database.SQLite.Simple.FromRow
+import qualified System.Environment as Env
 
-data Post = Post { id :: Text
+
+data Post = Post { id :: Int
                  , title :: Text
                  , created :: Text
                  , body :: Text
@@ -25,24 +30,41 @@ data Post = Post { id :: Text
 
 instance ToJSON Post where
 instance FromJSON Post where
+instance FromRow Post where
+    fromRow = Post <$> field <*> field <*> field <*> field <*> field
+instance ToRow Post where
+    toRow (Post id_ title created body slug) = toRow (id_,title,created,body,slug)
 
+defaultPort :: Int
+defaultPort = 3001
 
 main :: IO ()
 main = do
     putStrLn "App started at 3001"
-    posts <- collectPostsFrom "posts.json"
-    scotty 3001 $ app 
+    conn <- open "blog.db"
+--    result <- query_ conn "select * from content" :: IO [Post]
+--    mapM_ print result
+    
+    configuredPort <- Env.lookupEnv "PORT"
+    let port = case configuredPort of
+                  Just x -> read x
+                  Nothing -> defaultPort
+
+    scotty port $ app conn
+    close conn
 
 
-app :: ScottyM ()
-app = do
-    get "/" indexHandler
+app :: Connection -> ScottyM ()
+app conn = do
+    get "/" $ indexHandler conn
     get (regex "^/([a-zA-Z0-9|-]{3,})$") blogHandler
     get (regex "^/tag:([a-zA-Z0-9|-]{3,})$") tagsHandler
 
 
-indexHandler :: ActionM ()
-indexHandler = text "IndexHandler"
+indexHandler :: Connection -> ActionM ()
+indexHandler conn = do
+    contents <- liftIO $ (query_ conn "SELECT * FROM content" :: (IO [Post]))
+    text $ "Total content count is:"<> (pack (show $ length contents))
 
 blogHandler :: ActionM ()
 blogHandler = do
