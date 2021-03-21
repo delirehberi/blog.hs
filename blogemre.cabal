@@ -17,7 +17,7 @@ extra-source-files:  CHANGELOG.md
 
 executable blogemre
   main-is:             Main.hs
-  other-modules:       App
+--  other-modules:       App
   other-extensions: OverloadedStrings
   build-depends:       base, scotty, wai, wai-extra, directory, text, filepath, pandoc, aeson, bytestring
   hs-source-dirs: src
